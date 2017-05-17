@@ -22,7 +22,13 @@ namespace AndroidSlidingPuzzle
         private List<MyTextView> _tiles;
         private List<Point> _coords;
 
-        private Point emptyLocation;
+        private Point _emptyLocation;
+        
+        //set the colors for when a tile is in the correct or incorrect location
+        private Color _correctCoordColor = Color.Blue;
+        private Color _wrongCoordColor = Color.Green;
+
+        private bool _isPuzzleSolved;
 
         protected override void OnCreate(Bundle bundle)
         {
@@ -56,34 +62,34 @@ namespace AndroidSlidingPuzzle
 
         private void MakeTiles()
         {
-         
+
             _tileWidth = _gameViewWidth / 4;
             int counter = 1;
-            for (int vert = 0; vert < 4; vert++)
+            for (int h = 0; h < 4; h++)
             {
-                for (int horiz = 0; horiz < 4; horiz++)
+                for (int v = 0; v < 4; v++)
                 {
                     MyTextView textTile = new MyTextView(this);
 
-                    GridLayout.Spec rowSpec = GridLayout.InvokeSpec(vert);
-                    GridLayout.Spec colSpec = GridLayout.InvokeSpec(horiz);
+                    GridLayout.Spec rowSpec = GridLayout.InvokeSpec(h);
+                    GridLayout.Spec colSpec = GridLayout.InvokeSpec(v);
                     GridLayout.LayoutParams tileLayoutParams = new GridLayout.LayoutParams(rowSpec, colSpec);
-                    Point thisLoc = new Point(vert, horiz);
+                    Point thisLoc = new Point(v, h);
 
                     tileLayoutParams.Width = _tileWidth - 10;
                     tileLayoutParams.Height = _tileWidth - 10;
                     tileLayoutParams.SetMargins(5, 5, 5, 5);
 
-                    textTile.Text =(counter++).ToString();
+                    textTile.Text = (counter++).ToString();
                     textTile.TextSize = 40;
                     textTile.SetTextColor(Color.Black);
 
-                    textTile.Gravity=GravityFlags.Center;
-                    
+                    textTile.Gravity = GravityFlags.Center;
+
                     textTile.LayoutParameters = tileLayoutParams;
-                    textTile.SetBackgroundColor(Color.Green);
+                    textTile.SetBackgroundColor(_wrongCoordColor);
                     textTile.Touch += TextTile_Touch;
-                    
+
                     textTile.XPos = thisLoc.X;
                     textTile.YPos = thisLoc.Y;
                     _coords.Add(thisLoc);
@@ -98,33 +104,39 @@ namespace AndroidSlidingPuzzle
 
         private void TextTile_Touch(object sender, View.TouchEventArgs e)
         {
-            if (e.Event.Action == MotionEventActions.Up)
+            if (!_isPuzzleSolved)
             {
-                MyTextView thisTile = sender as MyTextView;
-
-                //determine if the square that was clicked is next to the open space
-                if(Math.Sqrt(Math.Pow((thisTile.XPos-emptyLocation.X),2)+Math.Pow(thisTile.YPos-emptyLocation.Y,2)) == 1)
+                if (e.Event.Action == MotionEventActions.Up)
                 {
-                    //save the location of the clicked button before moving it to the location that the empty square occupies
-                    Point currentPoint = new Point(thisTile.XPos,thisTile.YPos);
+                    MyTextView thisTile = sender as MyTextView;
 
-                    GridLayout.Spec rowSpec = GridLayout.InvokeSpec(emptyLocation.Y);
-                    GridLayout.Spec colSpec = GridLayout.InvokeSpec(emptyLocation.X);
+                    //determine if the square that was clicked is next to the open space
+                    if (Math.Sqrt(Math.Pow((thisTile.XPos - _emptyLocation.X), 2) +
+                                  Math.Pow(thisTile.YPos - _emptyLocation.Y, 2)) == 1)
+                    {
+                        //save the location of the clicked button before moving it to the location that the empty square occupies
+                        Point currentPoint = new Point(thisTile.XPos, thisTile.YPos);
 
-                    GridLayout.LayoutParams newLocParams = new GridLayout.LayoutParams(rowSpec,colSpec);
+                        GridLayout.Spec rowSpec = GridLayout.InvokeSpec(_emptyLocation.Y);
+                        GridLayout.Spec colSpec = GridLayout.InvokeSpec(_emptyLocation.X);
 
-                    thisTile.XPos = emptyLocation.X;
-                    thisTile.YPos = emptyLocation.Y;
+                        GridLayout.LayoutParams newLocParams = new GridLayout.LayoutParams(rowSpec, colSpec);
 
-                    newLocParams.Width = _tileWidth - 10;
-                    newLocParams.Height = _tileWidth - 10;
-                    newLocParams.SetMargins(5, 5, 5, 5);
+                        thisTile.XPos = _emptyLocation.X;
+                        thisTile.YPos = _emptyLocation.Y;
 
-                    thisTile.LayoutParameters = newLocParams;
-                    //move the empty square to the location originally occupied by the tile
-                    emptyLocation = currentPoint;
+                        newLocParams.Width = _tileWidth - 10;
+                        newLocParams.Height = _tileWidth - 10;
+                        newLocParams.SetMargins(5, 5, 5, 5);
+
+                        thisTile.LayoutParameters = newLocParams;
+                        //move the empty square to the location originally occupied by the tile
+                        _emptyLocation = currentPoint;
+                        TileIsInCorrectPosition(thisTile);
+
+                    }
+                    System.Diagnostics.Debug.WriteLine($"\r\r\rThis tile is at ({thisTile.XPos},{thisTile.YPos})");
                 }
-                //System.Diagnostics.Debug.WriteLine($"\r\r\rThis tile is at ({thisTile.XPos},{thisTile.YPos})");
             }
         }
 
@@ -133,10 +145,11 @@ namespace AndroidSlidingPuzzle
         /// </summary>
         private void RandomizeTiles()
         {
+            _isPuzzleSolved = false;
             List<Point> tempCoords = new List<Point>(_coords);
-
+            
             Random rand = new Random();
-           
+
             foreach (MyTextView view in _tiles)
             {
                 int randIndex = rand.Next(0, tempCoords.Count);
@@ -144,19 +157,47 @@ namespace AndroidSlidingPuzzle
 
                 GridLayout.Spec rowSpec = GridLayout.InvokeSpec(randLoc.Y);
                 GridLayout.Spec colSpec = GridLayout.InvokeSpec(randLoc.X);
-                GridLayout.LayoutParams randLayoutParameters = new GridLayout.LayoutParams(rowSpec,colSpec);
+                GridLayout.LayoutParams randLayoutParameters = new GridLayout.LayoutParams(rowSpec, colSpec);
 
                 randLayoutParameters.Width = _tileWidth - 10;
                 randLayoutParameters.Height = _tileWidth - 10;
-                randLayoutParameters.SetMargins(5,5,5,5);
-
+                randLayoutParameters.SetMargins(5, 5, 5, 5);
+                
                 view.XPos = randLoc.X;
                 view.YPos = randLoc.Y;
+                TileIsInCorrectPosition(view);
                 view.LayoutParameters = randLayoutParameters;
 
                 tempCoords.RemoveAt(randIndex);
             }
-            emptyLocation = tempCoords[0];
+            _emptyLocation = tempCoords[0];
+        }
+
+        private bool AreTilesInCorrectOrder()
+        {
+            return false;
+        }
+
+        private void TileIsInCorrectPosition(MyTextView view)
+        {
+            int viewIndex = 0;
+            foreach (MyTextView v in _tiles)
+            {
+                if (view == v)
+                {
+                    break;
+                }
+                viewIndex++;
+            }
+            if (_tiles[viewIndex].XPos == _coords[viewIndex].X && _tiles[viewIndex].YPos == _coords[viewIndex].Y)
+            {
+                view.SetBackgroundColor(_correctCoordColor);
+            }
+            else
+            {
+                view.SetBackgroundColor(_wrongCoordColor);
+            }
+
         }
 
         private void ResetButtonClick(object sender, EventArgs e)
@@ -165,6 +206,5 @@ namespace AndroidSlidingPuzzle
         }
     }
 
-    
-}
 
+}
